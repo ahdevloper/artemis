@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+from types import SimpleNamespace
 
 from third_party.mobile_use.utils.media import (
     create_steps_json_from_trace_folder,
@@ -20,9 +21,7 @@ from third_party.mobile_use.utils.media import (
 )
 
 
-
 def test_step_compilation_uses_persisted_session_records(tmp_path):
-    from types import SimpleNamespace
 
     records = [
         SimpleNamespace(
@@ -60,6 +59,7 @@ def test_step_compilation_uses_persisted_session_records(tmp_path):
             "motivation": "Enter the requested text",
         },
     ]
+
 
 def test_step_compilation_preserves_recording_manifest(tmp_path):
     step_file = tmp_path / "123.json"
