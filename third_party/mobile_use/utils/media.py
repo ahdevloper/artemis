@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from typing import Any
 
 from third_party.mobile_use.utils.logger import get_logger
 from PIL import Image
@@ -189,21 +190,51 @@ def remove_images_from_trace_folder(trace_folder_path: Path):
             file.unlink()
 
 
-def create_steps_json_from_trace_folder(trace_folder_path: Path):
-    """Compile legacy timestamp-named step files without consuming manifests."""
+def create_steps_json_from_trace_folder(
+    trace_folder_path: Path,
+    step_records: list[Any] | None = None,
+):
+    """Compile persisted session steps, falling back to legacy timestamp files."""
     steps = []
-    for file in trace_folder_path.iterdir():
-        if file.suffix == ".json" and file.stem.isdigit():
-            with open(file, encoding="utf-8", errors="ignore") as f:
-                json_content = f.read()
-                steps.append({"timestamp": int(file.stem), "data": json_content})
+    if step_records:
+        for record in sorted(step_records, key=lambda item: item.step_number):
+            action_taken = getattr(record, "action_taken", None)
+            if isinstance(action_taken, dict):
+                action = action_taken.get("action") or action_taken.get("name")
+                if action is None:
+                    action = json.dumps(action_taken, ensure_ascii=False, sort_keys=True)
+            elif action_taken is not None:
+                action = str(action_taken)
+            else:
+                action = getattr(record, "summary", None) or "-"
 
-    steps.sort(key=lambda f: f["timestamp"])
+            motivation = (
+                getattr(record, "operator_raw_thinking", None)
+                or getattr(record, "operator_native_thinking", None)
+                or getattr(record, "summary", None)
+                or "-"
+            )
+            steps.append(
+                {
+                    "step": record.step_number,
+                    "timestamp": record.timestamp,
+                    "action": str(action),
+                    "motivation": str(motivation),
+                }
+            )
+    else:
+        for file in trace_folder_path.iterdir():
+            if file.suffix == ".json" and file.stem.isdigit():
+                with open(file, encoding="utf-8", errors="ignore") as f:
+                    json_content = f.read()
+                    steps.append({"timestamp": int(file.stem), "data": json_content})
+
+        steps.sort(key=lambda f: f["timestamp"])
 
     logger.info(f"Found {len(steps)} steps to compile")
 
     with open(trace_folder_path / "steps.json", "w", encoding="utf-8", errors="ignore") as f:
-        f.write(json.dumps(steps))
+        f.write(json.dumps(steps, ensure_ascii=False))
 
 
 def remove_steps_json_from_trace_folder(trace_folder_path: Path):
