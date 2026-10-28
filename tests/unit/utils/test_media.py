@@ -20,6 +20,47 @@ from third_party.mobile_use.utils.media import (
 )
 
 
+
+def test_step_compilation_uses_persisted_session_records(tmp_path):
+    from types import SimpleNamespace
+
+    records = [
+        SimpleNamespace(
+            step_number=2,
+            timestamp=102.5,
+            action_taken={"action": "type", "text": "hello"},
+            operator_raw_thinking="Enter the requested text",
+            operator_native_thinking=None,
+            summary="Type text",
+        ),
+        SimpleNamespace(
+            step_number=1,
+            timestamp=101.5,
+            action_taken={"action": "click"},
+            operator_raw_thinking=None,
+            operator_native_thinking="Tap the submit button",
+            summary="Submit form",
+        ),
+    ]
+
+    create_steps_json_from_trace_folder(tmp_path, step_records=records)
+
+    compiled = json.loads((tmp_path / "steps.json").read_text(encoding="utf-8"))
+    assert compiled == [
+        {
+            "step": 1,
+            "timestamp": 101.5,
+            "action": "click",
+            "motivation": "Tap the submit button",
+        },
+        {
+            "step": 2,
+            "timestamp": 102.5,
+            "action": "type",
+            "motivation": "Enter the requested text",
+        },
+    ]
+
 def test_step_compilation_preserves_recording_manifest(tmp_path):
     step_file = tmp_path / "123.json"
     step_file.write_text('{"action": "click"}', encoding="utf-8")
