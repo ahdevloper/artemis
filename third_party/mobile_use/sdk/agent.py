@@ -918,7 +918,15 @@ class AgentBase:
 
         logger.info(f"[{task_name}] Compiling trace FROM FOLDER: " + str(temp_trace_path))
         create_gif_from_trace_folder(temp_trace_path)
-        create_steps_json_from_trace_folder(temp_trace_path)
+        persisted_steps = None
+        if context.data_engine and context.data_engine.current_session_id:
+            persisted_steps = context.data_engine.storage.get_steps(
+                context.data_engine.current_session_id
+            )
+        create_steps_json_from_trace_folder(
+            temp_trace_path,
+            step_records=persisted_steps,
+        )
 
         logger.info(f"[{task_name}] Video created, removing dust...")
         remove_images_from_trace_folder(temp_trace_path)
